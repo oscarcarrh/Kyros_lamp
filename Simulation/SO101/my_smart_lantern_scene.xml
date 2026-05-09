@@ -373,9 +373,9 @@
                               exponent="8"/>
 
                         <camera name="gripper_cam"
-                              pos="0 0 -0.025"
+                              pos="0.00 0.00 -0.090"
                               xyaxes="1 0 0  0 1 0"
-                              fovy="75"/>
+                              fovy="90"/>
 
                   </body>
 

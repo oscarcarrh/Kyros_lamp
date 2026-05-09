@@ -32,8 +32,8 @@ BOOK_Z = TABLE_Z + 0.015
 BOOK_START = np.array([0.35, -0.18, BOOK_Z])
 
 CAMERA_NAME = "gripper_cam"
-CAM_W = 320
-CAM_H = 240
+CAM_W = 480
+CAM_H = 360
 
 YAW_GAIN = 0.003
 PITCH_GAIN = 0.002
@@ -123,31 +123,29 @@ def detect_green_book(rgb):
 
     mask = cv2.inRange(hsv, lower_green, upper_green)
 
-    kernel = np.ones((5, 5), np.uint8)
+    kernel = np.ones((7, 7), np.uint8)
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
 
-    contours, _ = cv2.findContours(
-        mask,
-        cv2.RETR_EXTERNAL,
-        cv2.CHAIN_APPROX_SIMPLE
-    )
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     if not contours:
-        return None, None, mask
+        return None, None, mask, 0
 
     largest = max(contours, key=cv2.contourArea)
     area = cv2.contourArea(largest)
 
-    if area < 80:
-        return None, None, mask
+    if area < 250:
+        return None, None, mask, area
 
-    x, y, bw, bh = cv2.boundingRect(largest)
+    M = cv2.moments(largest)
+    if M["m00"] == 0:
+        return None, None, mask, area
 
-    cx = x + bw // 2
-    cy = y + bh // 2
+    cx = int(M["m10"] / M["m00"])
+    cy = int(M["m01"] / M["m00"])
 
-    return cx, cy, mask
+    return cx, cy, mask, area
 
 
 def vision_track_book(model, data, renderer, cam_id, debug=False):
@@ -163,7 +161,7 @@ def vision_track_book(model, data, renderer, cam_id, debug=False):
     renderer.update_scene(data, camera=cam_id)
     rgb = renderer.render()
 
-    cx, cy, mask = detect_green_book(rgb)
+    cx, cy, mask, area = detect_green_book(rgb)
 
     if cx is None:
         data.ctrl[:] += 0.01 * (HOME_POSE - data.ctrl[:])
@@ -190,20 +188,33 @@ def vision_track_book(model, data, renderer, cam_id, debug=False):
     error_x = (cx - w / 2) / (w / 2)
     error_y = (cy - h / 2) / (h / 2)
 
-    DEADBAND = 0.18
+    DEADBAND_X = 0.10
+    DEADBAND_Y = 0.10
 
-    MAX_YAW_STEP = 0.002
-    MAX_PITCH_STEP = 0.0015
+    MIN_TRACK_AREA = 2500
 
-    if abs(error_x) > DEADBAND:
-        yaw_step = -YAW_GAIN * error_x
-        yaw_step = np.clip(yaw_step, -MAX_YAW_STEP, MAX_YAW_STEP)
-        data.ctrl[0] += yaw_step
+    MAX_YAW_STEP = 0.0012
+    MAX_PITCH_STEP = 0.0010
 
-    if abs(error_y) > DEADBAND:
-        pitch_step = PITCH_GAIN * error_y
-        pitch_step = np.clip(pitch_step, -MAX_PITCH_STEP, MAX_PITCH_STEP)
-        data.ctrl[3] += pitch_step
+    YAW_SIGN = -1.0
+    YAW_RANGE = 0.8
+    PITCH_SIGN = -1.0
+    PITCH_RANGE = 0.45
+
+    if area > MIN_TRACK_AREA:
+        if abs(error_x) > DEADBAND_X:
+            desired_yaw = HOME_POSE[0] + YAW_SIGN * YAW_RANGE * error_x
+            data.ctrl[0] += 0.04 * (desired_yaw - data.ctrl[0])
+        else:
+            data.ctrl[0] += 0.04 * (HOME_POSE[0] - data.ctrl[0])
+
+        
+
+        if abs(error_y) > DEADBAND_Y:
+            desired_pitch = HOME_POSE[3] + PITCH_SIGN * PITCH_RANGE * error_y
+            data.ctrl[3] += 0.04 * (desired_pitch - data.ctrl[3])
+        else:
+            data.ctrl[3] += 0.04 * (HOME_POSE[3] - data.ctrl[3])
 
     data.ctrl[0] = np.clip(data.ctrl[0], YAW_LIMIT[0], YAW_LIMIT[1])
     data.ctrl[3] = np.clip(data.ctrl[3], WRIST_LIMIT[0], WRIST_LIMIT[1])
@@ -222,7 +233,7 @@ def vision_track_book(model, data, renderer, cam_id, debug=False):
 
         cv2.putText(
             bgr,
-            f"ex={error_x:.2f}, ey={error_y:.2f}",
+            f"ex={error_x:.2f}, ey={error_y:.2f}, area={area:.0f}",
             (10, 25),
             cv2.FONT_HERSHEY_SIMPLEX,
             0.6,
