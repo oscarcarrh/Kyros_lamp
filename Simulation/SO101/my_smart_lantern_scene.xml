@@ -76,6 +76,7 @@
     <material name="wrist_roll_pitch_so101_v2_material"  rgba="1 0.82 0.12 1"/>
     <material name="wrist_roll_follower_so101_v1_material" rgba="1 0.82 0.12 1"/>
     <material name="moving_jaw_so101_v1_material"        rgba="1 0.82 0.12 1"/>
+    <material name="lamp_yellow" rgba="1.0 0.85 0.25 1" emission="0.6" />
 
     <!-- ── NEW: procedural textures for the scene ── -->
 
@@ -100,11 +101,21 @@
     <!-- Books -->
     <!-- Book covers — cloth/leatherette sheen -->
     <material name="mat_book_red"
-              rgba="0.72 0.08 0.08 1" specular="0.12" shininess="0.25" reflectance="0.03"/>
-    <material name="mat_book_red_spine"
-              rgba="0.50 0.05 0.05 1" specular="0.10" shininess="0.20"/>
-    <material name="mat_book_red_pages"
-              rgba="0.96 0.94 0.88 1" specular="0.04" shininess="0.05"/>
+          rgba="0.0 1.0 0.15 1"
+          emission="0.25"
+          specular="0.25"
+          shininess="0.6"/>
+
+      <material name="mat_book_red_spine"
+            rgba="0.0 0.75 0.10 1"
+            emission="0.15"
+            specular="0.20"
+            shininess="0.5"/>
+
+      <material name="mat_book_red_pages"
+            rgba="0.85 1.0 0.85 1"
+            specular="0.04"
+            shininess="0.05"/>
 
     <!-- Notebook — off-white spiral -->
     <texture name="tex_notebook" type="2d" builtin="checker"
@@ -202,34 +213,9 @@
 
 
     <!-- ── Notebook (flat, open) ── -->
-    <body name="notebook" pos="0.55 -0.05 0.760">
-      <freejoint/>
-      <!-- cover -->
-      <geom type="box" size="0.095 0.130 0.004"
-            material="mat_notebook" mass="0.08"
-            friction="0.5 0.05 0.05"/>
-      <!-- spine ridge -->
-      <geom type="box" size="0.004 0.130 0.005"
-            pos="0 0 0.005" rgba="0.55 0.55 0.52 1"
-            contype="0" conaffinity="0"/>
-    </body>
 
     <!-- ── Coffee cup + liquid ── -->
-    <body name="cup" pos="0.62 0.28 0.813">
-      <freejoint/>
-      <!-- cup body -->
-      <geom type="cylinder" size="0.034 0.058"
-            material="mat_ceramic" mass="0.28"
-            friction="0.9 0.05 0.05"/>
-      <!-- coffee surface (thin disc at top) -->
-      <geom type="cylinder" size="0.028 0.002" pos="0 0 0.056"
-            material="mat_coffee" mass="0.001"
-            contype="0" conaffinity="0"/>
-      <!-- handle (thin box approximation) -->
-      <geom type="box" size="0.007 0.022 0.018" pos="0.041 0 0.010"
-            material="mat_ceramic" mass="0.001"
-            contype="0" conaffinity="0"/>
-    </body>
+    
 
     <!-- ── Scene overview camera ── -->
     <camera name="overview"
@@ -366,30 +352,32 @@
 
                 <!-- ── NEW: lantern geometry on gripper ── -->
                 <!-- Lantern body (small cylinder) -->
-                <geom name="lantern_body" type="cylinder"
-                      size="0.012 0.022" pos="0 -0.008 -0.115"
-                      material="mat_lantern"
-                      contype="0" conaffinity="0" group="2"/>
-                <!-- Lens (glowing disc) -->
-                <geom name="lantern_lens" type="cylinder"
-                      size="0.010 0.003" pos="0 -0.008 -0.138"
-                      material="mat_lens"
-                      contype="0" conaffinity="0" group="2"/>
-                <!-- Lantern beam direction site (for Python: data.site_xpos / xmat) -->
-                <site name="lantern_beam"
-                      pos="0 -0.008 -0.145"
-                      quat="0.707107 0 0.707107 0"
-                      size="0.005" rgba="1 1 0.5 0.8" group="1"/>
-                <light name="flashlight"
-                      pos="0 -0.008 -0.138"
-                      dir="0 0 -1"
-                      mode="targetbodycom"
-                      target="book_red"
-                      diffuse="0 0 0"
-                      specular="0 0 0"
-                      cutoff="22"
-                      exponent="12"
-                      castshadow="true"/>
+                <!-- Desk lamp attached to gripper -->
+                  <body name="lamp_mount" pos="0 -0.008 -0.115">
+
+                        <geom name="lamp_head"
+                              type="sphere"
+                              pos="0 0 -0.030"
+                              size="0.045"
+                              material="lamp_yellow"
+                              mass="0.03"
+                              contype="0"
+                              conaffinity="0"/>
+
+                        <light name="desk_light"
+                              pos="0 0 -0.030"
+                              dir="0 0 -1"
+                              diffuse="1.0 0.88 0.55"
+                              specular="0.35 0.30 0.20"
+                              cutoff="35"
+                              exponent="8"/>
+
+                        <camera name="gripper_cam"
+                              pos="0 0 -0.025"
+                              xyaxes="1 0 0  0 1 0"
+                              fovy="75"/>
+
+                  </body>
 
                 <!-- ── NEW: wrist camera site ── -->
                 <site name="wrist_cam"

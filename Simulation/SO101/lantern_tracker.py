@@ -1,22 +1,14 @@
 """
-SO101 Smart Lantern Tracker
-===========================
-
-Features
---------
-- Only RED book
-- Book open/close with O
-- Flashlight ON only when book is open
-- Dark scene
-- Robot tracks ONLY in YAW
-- Spotlight attached to gripper
-- No arm stretching
+SO101 Smart Lantern Tracker with Computer Vision
+================================================
 
 Controls
 --------
 WASD  -> move book
 Q/E   -> move book up/down
 O     -> open/close book
+L     -> lamp on/off
+V     -> vision debug on/off
 R     -> reset
 P     -> pause
 ESC   -> quit
@@ -28,221 +20,276 @@ import numpy as np
 import time
 import threading
 import msvcrt
-
-# ─────────────────────────────────────────────
-# CONFIG
-# ─────────────────────────────────────────────
+import cv2
 
 XML_PATH = "my_smart_lantern_scene.xml"
 
 DT = 0.002
 MOVE_SPEED = 0.003
-PAN_GAIN = 4.0
 
 TABLE_Z = 0.757
 BOOK_Z = TABLE_Z + 0.015
-
 BOOK_START = np.array([0.35, -0.18, BOOK_Z])
 
-# ─────────────────────────────────────────────
-# SHARED STATE
-# ─────────────────────────────────────────────
+CAMERA_NAME = "gripper_cam"
+CAM_W = 320
+CAM_H = 240
+
+YAW_GAIN = 0.003
+PITCH_GAIN = 0.002
+
+YAW_LIMIT = (-1.91986, 1.91986)
+WRIST_LIMIT = (0.35, 1.15)
 
 state = {
     "move": np.zeros(3),
     "paused": False,
     "quit": False,
     "reset": False,
-    "book_open": False,
+    "lamp_on": False,
+    "vision_debug": True,
 }
+
+HOME_POSE = np.array([
+    0.0,    # shoulder_pan
+    0.25,   # shoulder_lift
+    -0.65,  # elbow_flex
+    0.85,   # wrist_flex
+    0.0,    # wrist_roll
+    0.3
+])
 
 state_lock = threading.Lock()
 
-# ─────────────────────────────────────────────
-# HELPERS
-# ─────────────────────────────────────────────
 
 def get_book_pos(model, data):
     return data.xpos[model.body("book_red").id].copy()
 
 
 def set_book_pose(model, data, pos):
-
     jid = int(model.body("book_red").jntadr[0])
     qadr = int(model.jnt_qposadr[jid])
 
-    data.qpos[qadr:qadr+3] = pos
-
-    data.qpos[qadr+2] = max(data.qpos[qadr+2], TABLE_Z + 0.013)
+    data.qpos[qadr:qadr + 3] = pos
+    data.qpos[qadr + 2] = max(data.qpos[qadr + 2], TABLE_Z + 0.013)
 
     data.qpos[qadr] = np.clip(data.qpos[qadr], -0.40, 0.80)
-    data.qpos[qadr+1] = np.clip(data.qpos[qadr+1], -0.45, 0.45)
+    data.qpos[qadr + 1] = np.clip(data.qpos[qadr + 1], -0.45, 0.45)
 
     mujoco.mj_forward(model, data)
 
 
 def move_book(model, data, delta):
-
     pos = get_book_pos(model, data)
     pos += delta
-
     set_book_pose(model, data, pos)
 
 
-def reset_scene(model, data):
-
-    set_book_pose(model, data, BOOK_START)
-
-    data.ctrl[:] = 0.0
-
-    close_book(model, data)
-    set_flashlight(model, False)
-
-    mujoco.mj_forward(model, data)
-
-# ─────────────────────────────────────────────
-# BOOK OPEN / CLOSE
-# ─────────────────────────────────────────────
-
-def open_book(model, data):
-
-    top_id = model.geom("br_cover_top").id
-    bot_id = model.geom("br_cover_bot").id
-
-    model.geom_pos[top_id][2] = 0.030
-    model.geom_pos[bot_id][2] = -0.030
-
-    mujoco.mj_forward(model, data)
 
 
-def close_book(model, data):
-
-    top_id = model.geom("br_cover_top").id
-    bot_id = model.geom("br_cover_bot").id
-
-    model.geom_pos[top_id][2] = 0.0125
-    model.geom_pos[bot_id][2] = -0.0125
-
-    mujoco.mj_forward(model, data)
-
-# ─────────────────────────────────────────────
-# FLASHLIGHT
-# ─────────────────────────────────────────────
-
-def set_flashlight(model, enabled):
-
-    light_id = model.light("flashlight").id
+def set_lamp(model, enabled):
+    light_id = model.light("desk_light").id
+    mat_id = model.material("lamp_yellow").id
 
     if enabled:
+        model.light_diffuse[light_id] = np.array([2.0, 1.6, 0.9])
+        model.light_specular[light_id] = np.array([0.35, 0.30, 0.20])
 
-        model.light_diffuse[light_id] = np.array([1.0, 1.0, 0.9])
-        model.light_ambient[light_id] = np.array([0.15, 0.15, 0.12])
-        model.light_specular[light_id] = np.array([0.3, 0.3, 0.3])
+        model.mat_rgba[mat_id] = np.array([1.0, 0.85, 0.25, 1.0])
+        model.mat_emission[mat_id] = 1.0
 
     else:
-
         model.light_diffuse[light_id] = np.array([0.0, 0.0, 0.0])
-        model.light_ambient[light_id] = np.array([0.0, 0.0, 0.0])
         model.light_specular[light_id] = np.array([0.0, 0.0, 0.0])
 
-# ─────────────────────────────────────────────
-# YAW ONLY TRACKING
-# ─────────────────────────────────────────────
+        model.mat_rgba[mat_id] = np.array([0.35, 0.30, 0.10, 1.0])
+        model.mat_emission[mat_id] = 0.0
 
-def track_book_yaw_only(model, data):
 
-    base_pos = data.xpos[model.body("base").id].copy()
-    target = get_book_pos(model, data)
+def reset_scene(model, data):
+    set_book_pose(model, data, BOOK_START)
 
-    dx = target[0] - base_pos[0]
-    dy = target[1] - base_pos[1]
+    data.ctrl[:] = HOME_POSE
+    set_lamp(model, False)
 
-    yaw = np.arctan2(-dy, dx)
+    mujoco.mj_forward(model, data)
 
-    yaw = np.clip(yaw, -1.91986, 1.91986)
 
-    desired = np.array([
-        yaw,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.3
-    ])
+def detect_green_book(rgb):
+    hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
 
-    data.ctrl[:] += PAN_GAIN * DT * (desired - data.ctrl[:])
+    lower_green = np.array([40, 80, 60])
+    upper_green = np.array([90, 255, 255])
 
-# ─────────────────────────────────────────────
-# KEYBOARD THREAD
-# ─────────────────────────────────────────────
+    mask = cv2.inRange(hsv, lower_green, upper_green)
+
+    kernel = np.ones((5, 5), np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+
+    contours, _ = cv2.findContours(
+        mask,
+        cv2.RETR_EXTERNAL,
+        cv2.CHAIN_APPROX_SIMPLE
+    )
+
+    if not contours:
+        return None, None, mask
+
+    largest = max(contours, key=cv2.contourArea)
+    area = cv2.contourArea(largest)
+
+    if area < 80:
+        return None, None, mask
+
+    x, y, bw, bh = cv2.boundingRect(largest)
+
+    cx = x + bw // 2
+    cy = y + bh // 2
+
+    return cx, cy, mask
+
+
+def vision_track_book(model, data, renderer, cam_id, debug=False):
+    """
+    Tracks the red book using the gripper camera.
+
+    No MuJoCo book position is used here.
+    The robot only uses image error:
+        horizontal error -> shoulder pan
+        vertical error   -> wrist flex
+    """
+
+    renderer.update_scene(data, camera=cam_id)
+    rgb = renderer.render()
+
+    cx, cy, mask = detect_green_book(rgb)
+
+    if cx is None:
+        data.ctrl[:] += 0.01 * (HOME_POSE - data.ctrl[:])
+
+        if debug:
+            bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+            cv2.putText(
+                bgr,
+                "GREEN BOOK NOT DETECTED",
+                (20, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (0, 0, 255),
+                2
+            )
+            cv2.imshow("gripper camera", bgr)
+            cv2.imshow("green mask", mask)
+            cv2.waitKey(1)
+
+        return False
+
+    h, w, _ = rgb.shape
+
+    error_x = (cx - w / 2) / (w / 2)
+    error_y = (cy - h / 2) / (h / 2)
+
+    DEADBAND = 0.18
+
+    MAX_YAW_STEP = 0.002
+    MAX_PITCH_STEP = 0.0015
+
+    if abs(error_x) > DEADBAND:
+        yaw_step = -YAW_GAIN * error_x
+        yaw_step = np.clip(yaw_step, -MAX_YAW_STEP, MAX_YAW_STEP)
+        data.ctrl[0] += yaw_step
+
+    if abs(error_y) > DEADBAND:
+        pitch_step = PITCH_GAIN * error_y
+        pitch_step = np.clip(pitch_step, -MAX_PITCH_STEP, MAX_PITCH_STEP)
+        data.ctrl[3] += pitch_step
+
+    data.ctrl[0] = np.clip(data.ctrl[0], YAW_LIMIT[0], YAW_LIMIT[1])
+    data.ctrl[3] = np.clip(data.ctrl[3], WRIST_LIMIT[0], WRIST_LIMIT[1])
+
+    data.ctrl[1] = HOME_POSE[1]
+    data.ctrl[2] = HOME_POSE[2]
+    data.ctrl[4] = HOME_POSE[4]
+    data.ctrl[5] = HOME_POSE[5]
+
+    if debug:
+        bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+
+        cv2.circle(bgr, (cx, cy), 8, (0, 255, 0), -1)
+        cv2.line(bgr, (w // 2, 0), (w // 2, h), (255, 255, 255), 1)
+        cv2.line(bgr, (0, h // 2), (w, h // 2), (255, 255, 255), 1)
+
+        cv2.putText(
+            bgr,
+            f"ex={error_x:.2f}, ey={error_y:.2f}",
+            (10, 25),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (0, 255, 0),
+            2
+        )
+
+        cv2.imshow("gripper camera", bgr)
+        cv2.imshow("green mask", mask)
+        cv2.waitKey(1)
+
+    return True
+
 
 def keyboard_thread():
-
     print("\nControls:")
     print("WASD -> move book")
     print("Q/E  -> up/down")
-    print("O    -> open/close book")
+    print("L    -> lamp on/off")
+    print("V    -> vision debug on/off")
     print("R    -> reset")
     print("P    -> pause")
     print("ESC  -> quit\n")
 
     while True:
-
         if msvcrt.kbhit():
-
             ch = msvcrt.getwch()
 
             with state_lock:
-
-                if ch == '\x1b':
-
+                if ch == "\x1b":
                     state["quit"] = True
                     break
 
-                elif ch in ('p', 'P'):
-
+                elif ch in ("p", "P"):
                     state["paused"] = not state["paused"]
 
-                elif ch in ('r', 'R'):
-
+                elif ch in ("r", "R"):
                     state["reset"] = True
 
-                elif ch in ('o', 'O'):
+                elif ch in ("l", "L"):
+                    state["lamp_on"] = not state["lamp_on"]
 
-                    state["book_open"] = not state["book_open"]
+                elif ch in ("v", "V"):
+                    state["vision_debug"] = not state["vision_debug"]
 
-                elif ch in ('w', 'W'):
-
+                elif ch in ("w", "W"):
                     state["move"] += [MOVE_SPEED, 0, 0]
 
-                elif ch in ('s', 'S'):
-
+                elif ch in ("s", "S"):
                     state["move"] += [-MOVE_SPEED, 0, 0]
 
-                elif ch in ('a', 'A'):
-
+                elif ch in ("a", "A"):
                     state["move"] += [0, MOVE_SPEED, 0]
 
-                elif ch in ('d', 'D'):
-
+                elif ch in ("d", "D"):
                     state["move"] += [0, -MOVE_SPEED, 0]
 
-                elif ch in ('q', 'Q'):
-
+                elif ch in ("q", "Q"):
                     state["move"] += [0, 0, MOVE_SPEED]
 
-                elif ch in ('e', 'E'):
-
+                elif ch in ("e", "E"):
                     state["move"] += [0, 0, -MOVE_SPEED]
 
         time.sleep(0.01)
 
-# ─────────────────────────────────────────────
-# MAIN
-# ─────────────────────────────────────────────
 
 def main():
-
     print(f"Loading {XML_PATH}")
 
     model = mujoco.MjModel.from_xml_path(XML_PATH)
@@ -250,57 +297,57 @@ def main():
 
     mujoco.mj_forward(model, data)
 
+    data.ctrl[:] = HOME_POSE
+    mujoco.mj_forward(model, data)
+
+    cam_id = model.camera(CAMERA_NAME).id
+    renderer = mujoco.Renderer(model, height=CAM_H, width=CAM_W)
+
     kb = threading.Thread(target=keyboard_thread, daemon=True)
     kb.start()
 
     with mujoco.viewer.launch_passive(model, data) as viewer:
-
         viewer.cam.lookat[:] = [0.3, 0.0, 0.9]
         viewer.cam.distance = 1.6
         viewer.cam.elevation = -25
         viewer.cam.azimuth = 160
 
         while viewer.is_running():
-
             t0 = time.perf_counter()
 
             with state_lock:
-
                 if state["quit"]:
                     break
 
                 paused = state["paused"]
                 do_reset = state["reset"]
+
                 move = state["move"].copy()
                 state["move"] = np.zeros(3)
-
-                book_open = state["book_open"]
+                lamp_on = state["lamp_on"]
+                vision_debug = state["vision_debug"]
 
                 state["reset"] = False
 
             if do_reset:
-
                 reset_scene(model, data)
 
             if not paused:
-
                 if np.any(move != 0):
-
                     move_book(model, data, move)
 
-                if book_open:
+                set_lamp(model, lamp_on)
 
-                    open_book(model, data)
-                    set_flashlight(model, True)
-
-                    track_book_yaw_only(model, data)
-
+                if lamp_on:
+                    vision_track_book(
+                        model,
+                        data,
+                        renderer,
+                        cam_id,
+                        debug=vision_debug
+                    )
                 else:
-
-                    close_book(model, data)
-                    set_flashlight(model, False)
-
-                    data.ctrl[:] *= 0.95
+                    data.ctrl[:] += 0.02 * (HOME_POSE - data.ctrl[:])
 
                 mujoco.mj_step(model, data)
 
@@ -312,6 +359,8 @@ def main():
             if remaining > 0:
                 time.sleep(remaining)
 
+    renderer.close()
+    cv2.destroyAllWindows()
     print("Bye")
 
 
