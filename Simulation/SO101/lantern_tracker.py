@@ -27,7 +27,7 @@ import mujoco.viewer
 import numpy as np
 import time
 import threading
-import msvcrt
+# import msvcrt
 
 # ─────────────────────────────────────────────
 # CONFIG
@@ -188,52 +188,52 @@ def keyboard_thread():
 
     while True:
 
-        if msvcrt.kbhit():
+        # if msvcrt.kbhit():
 
-            ch = msvcrt.getwch()
+        #     ch = msvcrt.getwch()
 
-            with state_lock:
+        #     with state_lock:
 
-                if ch == '\x1b':
+        #         if ch == '\x1b':
 
-                    state["quit"] = True
-                    break
+        #             state["quit"] = True
+        #             break
 
-                elif ch in ('p', 'P'):
+        #         elif ch in ('p', 'P'):
 
-                    state["paused"] = not state["paused"]
+        #             state["paused"] = not state["paused"]
 
-                elif ch in ('r', 'R'):
+        #         elif ch in ('r', 'R'):
 
-                    state["reset"] = True
+        #             state["reset"] = True
 
-                elif ch in ('o', 'O'):
+        #         elif ch in ('o', 'O'):
 
-                    state["book_open"] = not state["book_open"]
+        #             state["book_open"] = not state["book_open"]
 
-                elif ch in ('w', 'W'):
+        #         elif ch in ('w', 'W'):
 
-                    state["move"] += [MOVE_SPEED, 0, 0]
+        #             state["move"] += [MOVE_SPEED, 0, 0]
 
-                elif ch in ('s', 'S'):
+        #         elif ch in ('s', 'S'):
 
-                    state["move"] += [-MOVE_SPEED, 0, 0]
+        #             state["move"] += [-MOVE_SPEED, 0, 0]
 
-                elif ch in ('a', 'A'):
+        #         elif ch in ('a', 'A'):
 
-                    state["move"] += [0, MOVE_SPEED, 0]
+        #             state["move"] += [0, MOVE_SPEED, 0]
 
-                elif ch in ('d', 'D'):
+        #         elif ch in ('d', 'D'):
 
-                    state["move"] += [0, -MOVE_SPEED, 0]
+        #             state["move"] += [0, -MOVE_SPEED, 0]
 
-                elif ch in ('q', 'Q'):
+        #         elif ch in ('q', 'Q'):
 
-                    state["move"] += [0, 0, MOVE_SPEED]
+        #             state["move"] += [0, 0, MOVE_SPEED]
 
-                elif ch in ('e', 'E'):
+        #         elif ch in ('e', 'E'):
 
-                    state["move"] += [0, 0, -MOVE_SPEED]
+        #             state["move"] += [0, 0, -MOVE_SPEED]
 
         time.sleep(0.01)
 
