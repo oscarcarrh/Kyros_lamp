@@ -1,23 +1,16 @@
 <?xml version="1.0" ?>
-<!-- Based on onshape-to-robot export — robot body untouched -->
-<!-- Added: desk, books, cup, lights, camera, lantern site, wrist cam site -->
 <mujoco model="so101_lantern_scene">
 
   <compiler angle="radian" meshdir="assets" autolimits="true"/>
-
-  <!-- Physics -->
   <option gravity="0 0 -9.81" timestep="0.002"/>
 
-  <!-- Realistic lighting -->
+  <!-- Near-zero ambient so flashlight is the only real light source -->
   <visual>
     <headlight ambient="0.1 0.1 0.1" diffuse="0.2 0.2 0.2"/>
-    <map shadowclip="1" shadowscale="0.6"/>
-    <quality shadowsize="2048"/>
+    <map shadowclip="1" shadowscale="0.5"/>
+    <quality shadowsize="4096"/>
   </visual>
 
-  <!-- ═══════════════════════════════════════════════
-       DEFAULTS — original untouched + scene extras
-  ═══════════════════════════════════════════════ -->
   <default>
     <default class="so101_new_calib">
       <joint damping="1" frictionloss="0.1" armature="0.005"/>
@@ -29,9 +22,6 @@
         <geom group="3"/>
       </default>
     </default>
-  </default>
-
-  <default>
     <default class="sts3215">
       <geom contype="0" conaffinity="0"/>
       <joint damping="0.60" frictionloss="0.052" armature="0.028"/>
@@ -43,11 +33,7 @@
     </default>
   </default>
 
-  <!-- ═══════════════════════════════════════════════
-       ASSETS — original untouched + scene textures
-  ═══════════════════════════════════════════════ -->
   <asset>
-    <!-- Original robot meshes -->
     <mesh file="waveshare_mounting_plate_so101_v2.stl"/>
     <mesh file="sts3215_03a_v1.stl"/>
     <mesh file="motor_holder_so101_base_v1.stl"/>
@@ -62,7 +48,7 @@
     <mesh file="sts3215_03a_no_horn_v1.stl"/>
     <mesh file="base_so101_v2.stl"/>
 
-    <!-- Original robot materials -->
+    <!-- Robot materials -->
     <material name="base_motor_holder_so101_v1_material" rgba="1 0.82 0.12 1"/>
     <material name="base_so101_v2_material"              rgba="1 0.82 0.12 1"/>
     <material name="sts3215_03a_v1_material"             rgba="0.1 0.1 0.1 1"/>
@@ -76,163 +62,164 @@
     <material name="wrist_roll_pitch_so101_v2_material"  rgba="1 0.82 0.12 1"/>
     <material name="wrist_roll_follower_so101_v1_material" rgba="1 0.82 0.12 1"/>
     <material name="moving_jaw_so101_v1_material"        rgba="1 0.82 0.12 1"/>
-    <material name="lamp_yellow" rgba="1.0 0.85 0.25 1" emission="0.6" />
 
-    <!-- ── NEW: procedural textures for the scene ── -->
-
-    <!-- Wood grain texture (desk surface) -->
+    <!-- Scene materials -->
     <texture name="tex_wood" type="2d" builtin="checker"
-             rgb1="0.55 0.34 0.17" rgb2="0.48 0.29 0.13"
-             width="512" height="512" mark="random" markrgb="0.42 0.26 0.11"/>
-    <material name="mat_wood" texture="tex_wood"
-              texrepeat="4 4" specular="0.15" shininess="0.3" reflectance="0.05"/>
+             rgb1="0.52 0.32 0.15" rgb2="0.44 0.27 0.11"
+             width="512" height="512" mark="random" markrgb="0.38 0.23 0.09"/>
+    <material name="mat_wood"      texture="tex_wood" texrepeat="4 4"
+              specular="0.18" shininess="0.4" reflectance="0.08"/>
+    <material name="mat_wood_dark" rgba="0.22 0.13 0.06 1"
+              specular="0.08" shininess="0.15"/>
 
-    <!-- Desk legs / frame — dark walnut -->
-    <material name="mat_wood_dark" rgba="0.28 0.17 0.08 1"
-              specular="0.1" shininess="0.2"/>
-
-    <!-- Floor — light concrete -->
     <texture name="tex_floor" type="2d" builtin="checker"
-             rgb1="0.80 0.80 0.78" rgb2="0.72 0.72 0.70"
-             width="512" height="512"/>
-    <material name="mat_floor" texture="tex_floor"
-              texrepeat="8 8" specular="0.05" shininess="0.1"/>
+             rgb1="0.08 0.08 0.08" rgb2="0.05 0.05 0.05" width="512" height="512"/>
+    <material name="mat_floor" texture="tex_floor" texrepeat="10 10"
+              specular="0.03" shininess="0.05"/>
 
-    <!-- Books -->
-    <!-- Book covers — cloth/leatherette sheen -->
-    <material name="mat_book_red"
-          rgba="0.0 1.0 0.15 1"
-          emission="0.25"
-          specular="0.25"
-          shininess="0.6"/>
+    <!-- Book — closed -->
+    <material name="mat_book_cover"  rgba="0.72 0.08 0.08 1"
+              specular="0.15" shininess="0.3" reflectance="0.04"/>
+    <material name="mat_book_spine"  rgba="0.48 0.05 0.05 1"
+              specular="0.10" shininess="0.2"/>
+    <material name="mat_book_pages"  rgba="0.95 0.93 0.87 1"
+              specular="0.05" shininess="0.05"/>
 
-      <material name="mat_book_red_spine"
-            rgba="0.0 0.75 0.10 1"
-            emission="0.15"
-            specular="0.20"
-            shininess="0.5"/>
+    <!-- Book — open pages (bright so flashlight shows well) -->
+    <material name="mat_open_pages"  rgba="0.99 0.98 0.95 1"
+              specular="0.12" shininess="0.15" reflectance="0.06"/>
+    <material name="mat_open_cover"  rgba="0.72 0.08 0.08 1"
+              specular="0.15" shininess="0.3"/>
 
-      <material name="mat_book_red_pages"
-            rgba="0.85 1.0 0.85 1"
-            specular="0.04"
-            shininess="0.05"/>
+    <!-- Cup -->
+    <material name="mat_ceramic" rgba="0.90 0.89 0.87 1"
+              specular="0.40" shininess="0.7" reflectance="0.12"/>
+    <material name="mat_coffee"  rgba="0.20 0.12 0.05 1"
+              specular="0.45" shininess="0.9" reflectance="0.18"/>
 
-    <!-- Notebook — off-white spiral -->
-    <texture name="tex_notebook" type="2d" builtin="checker"
-             rgb1="0.96 0.95 0.90" rgb2="0.88 0.87 0.82"
-             width="128" height="128" mark="cross" markrgb="0.70 0.70 0.68"/>
-    <material name="mat_notebook" texture="tex_notebook"
-              texrepeat="2 3" specular="0.05" shininess="0.05"/>
+    <!-- Lantern -->
+    <material name="mat_lantern"   rgba="0.95 0.88 0.10 1"
+              specular="0.35" shininess="0.5"/>
+    <material name="mat_lens_off"  rgba="0.18 0.18 0.15 1"
+              specular="0.20" shininess="0.4"/>
+    <material name="mat_lens_on"   rgba="1.0 0.97 0.82 1"
+              emission="1.0" specular="0.6" shininess="0.95"/>
 
-    <!-- Coffee cup — ceramic white -->
-    <texture name="tex_ceramic" type="2d" builtin="flat"
-             rgb1="0.94 0.93 0.91" width="64" height="64"/>
-    <material name="mat_ceramic" texture="tex_ceramic"
-              specular="0.35" shininess="0.6" reflectance="0.1"/>
-
-    <!-- Coffee liquid surface -->
-    <material name="mat_coffee" rgba="0.22 0.13 0.06 1"
-              specular="0.4" shininess="0.8" reflectance="0.15"/>
-
-    <!-- Lantern body — brushed yellow plastic -->
-    <material name="mat_lantern" rgba="0.95 0.88 0.10 1"
-              specular="0.3" shininess="0.5"/>
-
-    <!-- Lantern lens — glowing white -->
-    <material name="mat_lens" rgba="1.0 0.98 0.88 1"
-              emission="0.6" specular="0.5" shininess="0.9"/>
-
-    <!-- Wall — light paint -->
-    <texture name="tex_wall" type="2d" builtin="flat"
-             rgb1="0.91 0.90 0.87" width="64" height="64"/>
-    <material name="mat_wall" texture="tex_wall"
-              specular="0.04" shininess="0.05"/>
+    <material name="mat_wall" rgba="0.12 0.11 0.10 1"
+              specular="0.02" shininess="0.02"/>
   </asset>
 
-  <!-- ═══════════════════════════════════════════════
-       WORLDBODY
-  ═══════════════════════════════════════════════ -->
   <worldbody>
 
-    <!-- ── Lighting ── -->
-    <!-- Main overhead warm light -->
-
-
     <!-- ── Floor ── -->
-    <geom name="floor" type="plane" size="4 4 0.1"
-          material="mat_floor" friction="0.7 0.05 0.05"/>
+    <geom name="floor" type="plane" size="5 5 0.1"
+          material="mat_floor" friction="0.8 0.05 0.05"
+          contype="1" conaffinity="1"/>
 
-    <!-- ── Back wall (optional, adds depth) ── -->
-    <geom name="wall_back" type="box"
-          pos="0.0 1.05 0.75" size="1.5 0.04 0.75"
-          material="mat_wall" contype="0" conaffinity="0"/>
+    <!-- ── Back wall ── -->
+    <geom name="wall_back" type="box" pos="0.10 1.10 0.80"
+          size="1.8 0.05 0.82" material="mat_wall"
+          contype="0" conaffinity="0"/>
+    <geom name="wall_left" type="box" pos="-1.10 0.10 0.80"
+          size="0.05 1.8 0.82" material="mat_wall"
+          contype="0" conaffinity="0"/>
 
-    <!-- ── Desk ── -->
-    <!-- Tabletop -->
+    <!-- ── Desk ──
+         table surface: centre at x=0.45, y=0, z=0.750
+         half-size: 0.65 x 0.50 x 0.025
+         so surface top = z=0.775
+         Robot base sits at x=−0.10 (back edge), books at x=0.30~0.55 (front area)
+    ── -->
     <geom name="table_top" type="box"
-          pos="0.22 0.0 0.735" size="0.70 0.48 0.022"
-          material="mat_wood" friction="0.7 0.05 0.05"/>
-    <!-- Four legs -->
-    <geom name="leg_fl" type="box" pos="-0.44 -0.42 0.357"
-          size="0.022 0.022 0.357" material="mat_wood_dark"/>
-    <geom name="leg_fr" type="box" pos=" 0.84 -0.42 0.357"
-          size="0.022 0.022 0.357" material="mat_wood_dark"/>
-    <geom name="leg_bl" type="box" pos="-0.44  0.42 0.357"
-          size="0.022 0.022 0.357" material="mat_wood_dark"/>
-    <geom name="leg_br" type="box" pos=" 0.84  0.42 0.357"
-          size="0.022 0.022 0.357" material="mat_wood_dark"/>
-    <!-- Under-desk rail for realism -->
-    <geom name="rail_left"  type="box" pos="0.20 -0.41 0.42"
-          size="0.62 0.012 0.018" material="mat_wood_dark"
-          contype="0" conaffinity="0"/>
-    <geom name="rail_right" type="box" pos="0.20  0.41 0.42"
-          size="0.62 0.012 0.018" material="mat_wood_dark"
-          contype="0" conaffinity="0"/>
+          pos="0.45 0.0 0.750" size="0.65 0.50 0.025"
+          material="mat_wood" friction="0.8 0.05 0.05"
+          contype="1" conaffinity="1"/>
+    <!-- legs -->
+    <geom name="leg_fl" type="box" pos="-0.16 -0.46 0.362" size="0.024 0.024 0.362" material="mat_wood_dark" contype="1" conaffinity="1"/>
+    <geom name="leg_fr" type="box" pos=" 1.06 -0.46 0.362" size="0.024 0.024 0.362" material="mat_wood_dark" contype="1" conaffinity="1"/>
+    <geom name="leg_bl" type="box" pos="-0.16  0.46 0.362" size="0.024 0.024 0.362" material="mat_wood_dark" contype="1" conaffinity="1"/>
+    <geom name="leg_br" type="box" pos=" 1.06  0.46 0.362" size="0.024 0.024 0.362" material="mat_wood_dark" contype="1" conaffinity="1"/>
+    <geom name="rail_l" type="box" pos="0.45 -0.45 0.44"   size="0.60 0.014 0.020" material="mat_wood_dark" contype="0" conaffinity="0"/>
+    <geom name="rail_r" type="box" pos="0.45  0.45 0.44"   size="0.60 0.014 0.020" material="mat_wood_dark" contype="0" conaffinity="0"/>
 
-    <!-- ── Books — multi-geom: cover + spine + pages + collision proxy ── -->
-
-    <!-- RED BOOK (90x118mm, 28mm thick) -->
-    <body name="book_red" pos="0.35 -0.18 0.782">
+    <!-- ── CLOSED BOOK
+         table top = 0.775
+         book half-thickness = 0.014 → centre z = 0.789
+         book is in FRONT of robot: x=0.40, y=0.0
+    ── -->
+    <body name="book_red" pos="0.42 0.0 0.789">
       <freejoint/>
       <geom name="br_cover_top" type="box" size="0.090 0.118 0.0015"
-            pos="0 0  0.0125" material="mat_book_red" mass="0.05"
+            pos="0 0  0.0125" material="mat_book_cover" mass="0.04"
             contype="0" conaffinity="0"/>
       <geom name="br_cover_bot" type="box" size="0.090 0.118 0.0015"
-            pos="0 0 -0.0125" material="mat_book_red" mass="0.05"
+            pos="0 0 -0.0125" material="mat_book_cover" mass="0.04"
             contype="0" conaffinity="0"/>
-      <geom name="br_spine" type="box" size="0.004 0.118 0.012"
-            pos="-0.086 0 0" material="mat_book_red_spine" mass="0.02"
+      <geom name="br_spine" type="box" size="0.004 0.118 0.013"
+            pos="-0.086 0 0" material="mat_book_spine" mass="0.01"
             contype="0" conaffinity="0"/>
-      <geom name="br_pages" type="box" size="0.084 0.115 0.010"
-            pos="0.004 0 0" material="mat_book_red_pages" mass="0.12"/>
+      <geom name="br_pages" type="box" size="0.084 0.115 0.011"
+            pos="0.003 0 0" material="mat_book_pages" mass="0.10"/>
+      <!-- invisible solid collision box — rests on table, cannot be pushed through -->
       <geom name="br_col" type="box" size="0.090 0.118 0.014"
-            rgba="0 0 0 0" mass="0" friction="0.7 0.05 0.05"/>
+            rgba="0 0 0 0" mass="0" friction="0.8 0.05 0.05"
+            contype="1" conaffinity="1"/>
     </body>
 
-    <!-- BLUE BOOK (82x112mm, 24mm thick) -->
+    <!-- ── OPEN BOOK (same footprint, starts fully invisible) ── -->
+    <body name="book_open" pos="0.42 0.0 0.778">
+      <freejoint/>
+      <!-- left page -->
+      <geom name="bo_left"    type="box" size="0.090 0.118 0.002"
+            pos="-0.046 0 0.002" rgba="0.99 0.98 0.95 0"
+            mass="0.01" contype="0" conaffinity="0"/>
+      <!-- right page -->
+      <geom name="bo_right"   type="box" size="0.090 0.118 0.002"
+            pos=" 0.046 0 0.002" rgba="0.99 0.98 0.95 0"
+            mass="0.01" contype="0" conaffinity="0"/>
+      <!-- spine groove -->
+      <geom name="bo_spine"   type="box" size="0.005 0.118 0.003"
+            pos="0 0 0.001" rgba="0.50 0.06 0.06 0"
+            mass="0.01" contype="0" conaffinity="0"/>
+      <!-- left cover (lying flat under page) -->
+      <geom name="bo_cvr_l"   type="box" size="0.090 0.118 0.0015"
+            pos="-0.046 0 -0.003" rgba="0.72 0.08 0.08 0"
+            mass="0.01" contype="0" conaffinity="0"/>
+      <!-- right cover -->
+      <geom name="bo_cvr_r"   type="box" size="0.090 0.118 0.0015"
+            pos=" 0.046 0 -0.003" rgba="0.72 0.08 0.08 0"
+            mass="0.01" contype="0" conaffinity="0"/>
+      <!-- solid collision so it stays on table -->
+      <geom name="bo_col"     type="box" size="0.092 0.120 0.006"
+            rgba="0 0 0 0" mass="0.15" friction="0.8 0.05 0.05"
+            contype="1" conaffinity="1"/>
+    </body>
 
+    <!-- ── Coffee cup (far corner) ── -->
+    <body name="cup" pos="0.85 0.32 0.833">
+      <freejoint/>
+      <geom type="cylinder" size="0.034 0.058" material="mat_ceramic"
+            mass="0.28" friction="0.9 0.05 0.05" contype="1" conaffinity="1"/>
+      <geom type="cylinder" size="0.028 0.002" pos="0 0 0.057"
+            material="mat_coffee" mass="0.001" contype="0" conaffinity="0"/>
+      <geom type="box" size="0.007 0.022 0.018" pos="0.041 0 0.010"
+            material="mat_ceramic" mass="0.001" contype="0" conaffinity="0"/>
+    </body>
 
-    <!-- ── Notebook (flat, open) ── -->
+    <!-- Scene camera — lateral para ver la escena completa -->
+    <camera name="overview" pos="0.60 -1.10 1.30"
+            xyaxes="0.90 0.44 0  -0.28 0.57 0.77"/>
 
-    <!-- ── Coffee cup + liquid ── -->
-    
+    <!-- Camara cenital — mero arriba de la mesa apuntando hacia abajo -->
+    <camera name="top_cam"
+            pos="0.45 0.0 1.45"
+            xyaxes="1 0 0  0 1 0"/>
 
-    <!-- ── Scene overview camera ── -->
-    <camera name="overview"
-            pos="0.75 -0.95 1.15"
-            xyaxes="0.74 0.67 0  -0.38 0.42 0.82"/>
-
-    <!-- ── Wrist / lantern camera (close-up) ── -->
-    <camera name="wrist_view"
-            pos="0.30 -0.50 1.10"
-            xyaxes="0.80 0.60 0  -0.30 0.40 0.87"/>
-
-    <!-- ═══════════════════════════════════════════
-         ROBOT — 100% original from XML #1
-         Only addition: two <site> tags inside
-         <body name="gripper"> for lantern + cam
-    ═══════════════════════════════════════════ -->
-    <body name="base" pos="0 0 0.757" quat="1 0 0 0" childclass="so101_new_calib">
+    <!-- ═══════════════════════════════════════════════════════════
+         ROBOT — base at x=−0.05, y=0, sitting on table surface
+         table top z=0.775, robot base pos z=0.775
+    ═══════════════════════════════════════════════════════════ -->
+    <body name="base" pos="-0.05 0.0 0.775" quat="1 0 0 0" childclass="so101_new_calib">
       <inertial pos="0.0137179 -5.19711e-05 0.0334843" mass="0.147"
                 fullinertia="0.000114686 0.000136117 0.000130364 -4.59787e-07 4.97151e-06 9.75275e-08"/>
       <geom type="mesh" class="visual" pos="-0.00636471 -9.94414e-05 -0.0024" quat="0.5 0.5 0.5 0.5"
@@ -253,38 +240,22 @@
                range="-1.9198621771937616 1.9198621771937634" class="sts3215"/>
         <inertial pos="-0.0307604 -1.66727e-05 -0.0252713" mass="0.100006"
                   fullinertia="8.3759e-05 8.10403e-05 2.39783e-05 7.55525e-08 -1.16342e-06 1.54663e-07"/>
-        <geom type="mesh" class="visual" pos="-0.0303992 0.000422241 -0.0417"
-              quat="0.5 0.5 0.5 -0.5" mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
-        <geom type="mesh" class="collision" pos="-0.0303992 0.000422241 -0.0417"
-              quat="0.5 0.5 0.5 -0.5" mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
-        <geom type="mesh" class="visual" pos="-0.0675992 -0.000177759 0.0158499"
-              quat="0.5 0.5 -0.5 0.5" mesh="motor_holder_so101_base_v1"
-              material="motor_holder_so101_base_v1_material"/>
-        <geom type="mesh" class="collision" pos="-0.0675992 -0.000177759 0.0158499"
-              quat="0.5 0.5 -0.5 0.5" mesh="motor_holder_so101_base_v1"
-              material="motor_holder_so101_base_v1_material"/>
-        <geom type="mesh" class="visual" pos="0.0122008 2.22413e-05 0.0464"
-              quat="0.707107 -0.707107 -0 8.3163e-34"
-              mesh="rotation_pitch_so101_v1" material="rotation_pitch_so101_v1_material"/>
-        <geom type="mesh" class="collision" pos="0.0122008 2.22413e-05 0.0464"
-              quat="0.707107 -0.707107 -0 8.3163e-34"
-              mesh="rotation_pitch_so101_v1" material="rotation_pitch_so101_v1_material"/>
+        <geom type="mesh" class="visual"    pos="-0.0303992 0.000422241 -0.0417" quat="0.5 0.5 0.5 -0.5" mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
+        <geom type="mesh" class="collision" pos="-0.0303992 0.000422241 -0.0417" quat="0.5 0.5 0.5 -0.5" mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
+        <geom type="mesh" class="visual"    pos="-0.0675992 -0.000177759 0.0158499" quat="0.5 0.5 -0.5 0.5" mesh="motor_holder_so101_base_v1" material="motor_holder_so101_base_v1_material"/>
+        <geom type="mesh" class="collision" pos="-0.0675992 -0.000177759 0.0158499" quat="0.5 0.5 -0.5 0.5" mesh="motor_holder_so101_base_v1" material="motor_holder_so101_base_v1_material"/>
+        <geom type="mesh" class="visual"    pos="0.0122008 2.22413e-05 0.0464" quat="0.707107 -0.707107 -0 8.3163e-34" mesh="rotation_pitch_so101_v1" material="rotation_pitch_so101_v1_material"/>
+        <geom type="mesh" class="collision" pos="0.0122008 2.22413e-05 0.0464" quat="0.707107 -0.707107 -0 8.3163e-34" mesh="rotation_pitch_so101_v1" material="rotation_pitch_so101_v1_material"/>
 
         <body name="upper_arm" pos="-0.0303992 -0.0182778 -0.0542" quat="0.5 -0.5 -0.5 -0.5">
           <joint axis="0 0 1" name="shoulder_lift" type="hinge"
                  range="-1.7453292519943224 1.7453292519943366" class="sts3215"/>
           <inertial pos="-0.0898471 -0.00838224 0.0184089" mass="0.103"
                     fullinertia="4.08002e-05 0.000147318 0.000142487 -1.97819e-05 -4.03016e-08 8.97326e-09"/>
-          <geom type="mesh" class="visual" pos="-0.11257 -0.0155 0.0187"
-                quat="4.56308e-16 -0.707107 0.707107 -1.37383e-16"
-                mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
-          <geom type="mesh" class="collision" pos="-0.11257 -0.0155 0.0187"
-                quat="4.56308e-16 -0.707107 0.707107 -1.37383e-16"
-                mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
-          <geom type="mesh" class="visual" pos="-0.065085 0.012 0.0182" quat="0 1 0 0"
-                mesh="upper_arm_so101_v1" material="upper_arm_so101_v1_material"/>
-          <geom type="mesh" class="collision" pos="-0.065085 0.012 0.0182" quat="0 1 0 0"
-                mesh="upper_arm_so101_v1" material="upper_arm_so101_v1_material"/>
+          <geom type="mesh" class="visual"    pos="-0.11257 -0.0155 0.0187" quat="4.56308e-16 -0.707107 0.707107 -1.37383e-16" mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
+          <geom type="mesh" class="collision" pos="-0.11257 -0.0155 0.0187" quat="4.56308e-16 -0.707107 0.707107 -1.37383e-16" mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
+          <geom type="mesh" class="visual"    pos="-0.065085 0.012 0.0182" quat="0 1 0 0" mesh="upper_arm_so101_v1" material="upper_arm_so101_v1_material"/>
+          <geom type="mesh" class="collision" pos="-0.065085 0.012 0.0182" quat="0 1 0 0" mesh="upper_arm_so101_v1" material="upper_arm_so101_v1_material"/>
 
           <body name="lower_arm" pos="-0.11257 -0.028 1.73763e-16"
                 quat="0.707107 -5.98613e-17 -2.58051e-17 0.707107">
@@ -292,22 +263,12 @@
                    range="-1.69 1.69" class="sts3215"/>
             <inertial pos="-0.0980701 0.00324376 0.0182831" mass="0.104"
                       fullinertia="2.87438e-05 0.000159844 0.00014529 7.41152e-06 1.26409e-06 -4.90188e-08"/>
-            <geom type="mesh" class="visual" pos="-0.0648499 -0.032 0.0182" quat="0 1 0 0"
-                  mesh="under_arm_so101_v1" material="under_arm_so101_v1_material"/>
-            <geom type="mesh" class="collision" pos="-0.0648499 -0.032 0.0182" quat="0 1 0 0"
-                  mesh="under_arm_so101_v1" material="under_arm_so101_v1_material"/>
-            <geom type="mesh" class="visual" pos="-0.0648499 -0.032 0.018"
-                  quat="3.92687e-16 -1 -1.9186e-15 -6.38378e-16"
-                  mesh="motor_holder_so101_wrist_v1" material="motor_holder_so101_wrist_v1_material"/>
-            <geom type="mesh" class="collision" pos="-0.0648499 -0.032 0.018"
-                  quat="3.92687e-16 -1 -1.9186e-15 -6.38378e-16"
-                  mesh="motor_holder_so101_wrist_v1" material="motor_holder_so101_wrist_v1_material"/>
-            <geom type="mesh" class="visual" pos="-0.1224 0.0052 0.0187"
-                  quat="7.21645e-16 1.56949e-15 1 -3.33067e-16"
-                  mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
-            <geom type="mesh" class="collision" pos="-0.1224 0.0052 0.0187"
-                  quat="7.21645e-16 1.56949e-15 1 -3.33067e-16"
-                  mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
+            <geom type="mesh" class="visual"    pos="-0.0648499 -0.032 0.0182" quat="0 1 0 0" mesh="under_arm_so101_v1" material="under_arm_so101_v1_material"/>
+            <geom type="mesh" class="collision" pos="-0.0648499 -0.032 0.0182" quat="0 1 0 0" mesh="under_arm_so101_v1" material="under_arm_so101_v1_material"/>
+            <geom type="mesh" class="visual"    pos="-0.0648499 -0.032 0.018" quat="3.92687e-16 -1 -1.9186e-15 -6.38378e-16" mesh="motor_holder_so101_wrist_v1" material="motor_holder_so101_wrist_v1_material"/>
+            <geom type="mesh" class="collision" pos="-0.0648499 -0.032 0.018" quat="3.92687e-16 -1 -1.9186e-15 -6.38378e-16" mesh="motor_holder_so101_wrist_v1" material="motor_holder_so101_wrist_v1_material"/>
+            <geom type="mesh" class="visual"    pos="-0.1224 0.0052 0.0187" quat="7.21645e-16 1.56949e-15 1 -3.33067e-16" mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
+            <geom type="mesh" class="collision" pos="-0.1224 0.0052 0.0187" quat="7.21645e-16 1.56949e-15 1 -3.33067e-16" mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
 
             <body name="wrist" pos="-0.1349 0.0052 3.62355e-17"
                   quat="0.707107 9.58722e-16 -7.51313e-16 -0.707107">
@@ -315,16 +276,10 @@
                      range="-1.6580628494556928 1.6580627293335335" class="sts3215"/>
               <inertial pos="-0.000103312 -0.0386143 0.0281156" mass="0.079"
                         fullinertia="3.68263e-05 2.5391e-05 2.1e-05 1.7893e-08 -5.28128e-08 3.6412e-06"/>
-              <geom type="mesh" class="visual" pos="8.32667e-17 -0.0424 0.0306"
-                    quat="0.5 0.5 0.5 -0.5"
-                    mesh="sts3215_03a_no_horn_v1" material="sts3215_03a_no_horn_v1_material"/>
-              <geom type="mesh" class="collision" pos="8.32667e-17 -0.0424 0.0306"
-                    quat="0.5 0.5 0.5 -0.5"
-                    mesh="sts3215_03a_no_horn_v1" material="sts3215_03a_no_horn_v1_material"/>
-              <geom type="mesh" class="visual" pos="0 -0.028 0.0181" quat="0.5 -0.5 -0.5 -0.5"
-                    mesh="wrist_roll_pitch_so101_v2" material="wrist_roll_pitch_so101_v2_material"/>
-              <geom type="mesh" class="collision" pos="0 -0.028 0.0181" quat="0.5 -0.5 -0.5 -0.5"
-                    mesh="wrist_roll_pitch_so101_v2" material="wrist_roll_pitch_so101_v2_material"/>
+              <geom type="mesh" class="visual"    pos="8.32667e-17 -0.0424 0.0306" quat="0.5 0.5 0.5 -0.5" mesh="sts3215_03a_no_horn_v1" material="sts3215_03a_no_horn_v1_material"/>
+              <geom type="mesh" class="collision" pos="8.32667e-17 -0.0424 0.0306" quat="0.5 0.5 0.5 -0.5" mesh="sts3215_03a_no_horn_v1" material="sts3215_03a_no_horn_v1_material"/>
+              <geom type="mesh" class="visual"    pos="0 -0.028 0.0181" quat="0.5 -0.5 -0.5 -0.5" mesh="wrist_roll_pitch_so101_v2" material="wrist_roll_pitch_so101_v2_material"/>
+              <geom type="mesh" class="collision" pos="0 -0.028 0.0181" quat="0.5 -0.5 -0.5 -0.5" mesh="wrist_roll_pitch_so101_v2" material="wrist_roll_pitch_so101_v2_material"/>
 
               <body name="gripper" pos="5.55112e-17 -0.0611 0.0181"
                     quat="0.0172091 -0.0172091 0.706897 0.706897">
@@ -332,58 +287,38 @@
                        range="-2.7438472969992493 2.841206309382605" class="sts3215"/>
                 <inertial pos="0.000213627 0.000245138 -0.025187" mass="0.087"
                           fullinertia="2.75087e-05 4.33657e-05 3.45059e-05 -3.35241e-07 -5.7352e-06 -5.17847e-08"/>
-                <geom type="mesh" class="visual" pos="0.0077 0.0001 -0.0234"
-                      quat="0.707107 -0.707107 1.66015e-15 6.45094e-15"
-                      mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
-                <geom type="mesh" class="collision" pos="0.0077 0.0001 -0.0234"
-                      quat="0.707107 -0.707107 1.66015e-15 6.45094e-15"
-                      mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
-                <geom type="mesh" class="visual" pos="8.32667e-17 -0.000218214 0.000949706"
-                      quat="0 1 0 0"
-                      mesh="wrist_roll_follower_so101_v1" material="wrist_roll_follower_so101_v1_material"/>
-                <geom type="mesh" class="collision" pos="8.32667e-17 -0.000218214 0.000949706"
-                      quat="0 1 0 0"
-                      mesh="wrist_roll_follower_so101_v1" material="wrist_roll_follower_so101_v1_material"/>
+                <geom type="mesh" class="visual"    pos="0.0077 0.0001 -0.0234" quat="0.707107 -0.707107 1.66015e-15 6.45094e-15" mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
+                <geom type="mesh" class="collision" pos="0.0077 0.0001 -0.0234" quat="0.707107 -0.707107 1.66015e-15 6.45094e-15" mesh="sts3215_03a_v1" material="sts3215_03a_v1_material"/>
+                <geom type="mesh" class="visual"    pos="8.32667e-17 -0.000218214 0.000949706" quat="0 1 0 0" mesh="wrist_roll_follower_so101_v1" material="wrist_roll_follower_so101_v1_material"/>
+                <geom type="mesh" class="collision" pos="8.32667e-17 -0.000218214 0.000949706" quat="0 1 0 0" mesh="wrist_roll_follower_so101_v1" material="wrist_roll_follower_so101_v1_material"/>
 
-                <!-- Original gripperframe site — untouched -->
                 <site group="3" name="gripperframe"
                       pos="-0.0079 -0.000218121 -0.0981274"
                       quat="0.707107 -0 0.707107 -2.37788e-17"/>
 
-                <!-- ── NEW: lantern geometry on gripper ── -->
-                <!-- Lantern body (small cylinder) -->
-                <!-- Desk lamp attached to gripper -->
-                  <body name="lamp_mount" pos="0 -0.008 -0.115">
+                <!-- Lantern body -->
+                <geom name="lantern_body" type="cylinder" size="0.013 0.024"
+                      pos="0 -0.008 -0.118" material="mat_lantern"
+                      contype="0" conaffinity="0" group="2"/>
+                <!-- Lens — Python swaps material via rgba -->
+                <geom name="lantern_lens" type="cylinder" size="0.011 0.004"
+                      pos="0 -0.008 -0.143" material="mat_lens_off"
+                      contype="0" conaffinity="0" group="2"/>
+                <!-- Beam reference site -->
+                <site name="lantern_beam" pos="0 -0.008 -0.150"
+                      quat="0.707107 0 0.707107 0" size="0.005"
+                      rgba="1 1 0.5 0.0" group="1"/>
 
-                        <geom name="lamp_head"
-                              type="sphere"
-                              pos="0 0 -0.030"
-                              size="0.045"
-                              material="lamp_yellow"
-                              mass="0.03"
-                              contype="0"
-                              conaffinity="0"/>
-
-                        <light name="desk_light"
-                              pos="0 0 -0.030"
-                              dir="0 0 -1"
-                              diffuse="1.0 0.88 0.55"
-                              specular="0.35 0.30 0.20"
-                              cutoff="35"
-                              exponent="8"/>
-
-                        <camera name="gripper_cam"
-                              pos="0.00 0.00 -0.090"
-                              xyaxes="1 0 0  0 1 0"
-                              fovy="90"/>
-
-                  </body>
-
-                <!-- ── NEW: wrist camera site ── -->
-                <site name="wrist_cam"
-                      pos="0.016 0.004 -0.088"
-                      quat="0.707107 0 0.707107 0"
-                      size="0.004" rgba="0.2 0.2 0.9 1" group="1"/>
+                <!-- Flashlight — mode=fixed moves with gripper automatically -->
+                <!-- dir="0 0 -1" in local gripper frame = straight out of lens  -->
+                <light name="flashlight"
+                       pos="0 -0.008 -0.143"
+                       dir="0 1 0"
+                       mode="fixed"
+                       diffuse="0 0 0"
+                       cutoff="42"
+                       exponent="5"
+                       castshadow="true"/>
 
                 <body name="moving_jaw_so101_v1" pos="0.0202 0.0188 -0.0234"
                       quat="0.707107 0.707107 -1.85362e-08 1.85362e-08">
@@ -391,12 +326,8 @@
                          range="-0.17453297762778586 1.7453291995659765" class="sts3215"/>
                   <inertial pos="-0.00157495 -0.0300244 0.0192755" mass="0.012"
                             fullinertia="6.61427e-06 1.89032e-06 5.28738e-06 -3.19807e-07 -5.90717e-09 -1.09945e-07"/>
-                  <geom type="mesh" class="visual" pos="-5.55112e-17 -5.55112e-17 0.0189"
-                        quat="1 -0 3.00524e-16 -2.00834e-17"
-                        mesh="moving_jaw_so101_v1" material="moving_jaw_so101_v1_material"/>
-                  <geom type="mesh" class="collision" pos="-5.55112e-17 -5.55112e-17 0.0189"
-                        quat="1 -0 3.00524e-16 -2.00834e-17"
-                        mesh="moving_jaw_so101_v1" material="moving_jaw_so101_v1_material"/>
+                  <geom type="mesh" class="visual"    pos="-5.55112e-17 -5.55112e-17 0.0189" quat="1 -0 3.00524e-16 -2.00834e-17" mesh="moving_jaw_so101_v1" material="moving_jaw_so101_v1_material"/>
+                  <geom type="mesh" class="collision" pos="-5.55112e-17 -5.55112e-17 0.0189" quat="1 -0 3.00524e-16 -2.00834e-17" mesh="moving_jaw_so101_v1" material="moving_jaw_so101_v1_material"/>
                 </body>
               </body>
             </body>
@@ -407,24 +338,14 @@
 
   </worldbody>
 
-  <!-- ═══════════════════════════════════════════════
-       ACTUATOR — original untouched
-  ═══════════════════════════════════════════════ -->
   <actuator>
-    <position class="sts3215" name="shoulder_pan"  joint="shoulder_pan"
-              forcerange="-3.35 3.35" ctrlrange="-1.91986 1.91986"/>
-    <position class="sts3215" name="shoulder_lift" joint="shoulder_lift"
-              forcerange="-3.35 3.35" ctrlrange="-1.74533 1.74533"/>
-    <position class="sts3215" name="elbow_flex"    joint="elbow_flex"
-              forcerange="-3.35 3.35" ctrlrange="-1.69 1.69"/>
-    <position class="sts3215" name="wrist_flex"    joint="wrist_flex"
-              forcerange="-3.35 3.35" ctrlrange="-1.65806 1.65806"/>
-    <position class="sts3215" name="wrist_roll"    joint="wrist_roll"
-              forcerange="-3.35 3.35" ctrlrange="-2.74385 2.84121"/>
-    <position class="sts3215" name="gripper"       joint="gripper"
-              forcerange="-3.35 3.35" ctrlrange="-0.17453 1.74533"/>
+    <position class="sts3215" name="shoulder_pan"  joint="shoulder_pan"  forcerange="-3.35 3.35" ctrlrange="-1.91986 1.91986"/>
+    <position class="sts3215" name="shoulder_lift" joint="shoulder_lift" forcerange="-3.35 3.35" ctrlrange="-1.74533 1.74533"/>
+    <position class="sts3215" name="elbow_flex"    joint="elbow_flex"    forcerange="-3.35 3.35" ctrlrange="-1.69 1.69"/>
+    <position class="sts3215" name="wrist_flex"    joint="wrist_flex"    forcerange="-3.35 3.35" ctrlrange="-1.65806 1.65806"/>
+    <position class="sts3215" name="wrist_roll"    joint="wrist_roll"    forcerange="-3.35 3.35" ctrlrange="-2.74385 2.84121"/>
+    <position class="sts3215" name="gripper"       joint="gripper"       forcerange="-3.35 3.35" ctrlrange="-0.17453 1.74533"/>
   </actuator>
 
   <equality/>
-
 </mujoco>
