@@ -33,9 +33,13 @@ import termios
 import tty
 import threading
 
+from dotenv import load_dotenv
+
 import mujoco
 import mujoco.viewer
 import numpy as np
+
+load_dotenv()
 
 try:
     import speech_recognition as sr
